@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trilha Técnica | Tech Você</title>
+<style>
+:root{color-scheme:dark;font:16px system-ui;background:#111211;color:#f3f5f2}body{max-width:68rem;margin:auto;padding:1.5rem}header{padding:2rem 0}header img{max-width:11rem;max-height:5rem}h1{font-size:clamp(2rem,6vw,4rem);margin:.4rem 0}small,progress{color:#b9fa3c}progress{width:100%;accent-color:#b9fa3c}main{display:grid;grid-template-columns:1fr 2fr;gap:1rem}section,nav,details{background:#232423;padding:1.25rem;border-radius:1rem}button{font:inherit;border:1px solid #969996;border-radius:.5rem;padding:.65rem;background:#111211;color:inherit;text-align:left;cursor:pointer}button:disabled{opacity:.65;cursor:default}nav button{display:block;width:100%;margin:.5rem 0}button[aria-current=true]{border-color:#b9fa3c}video{width:100%;background:#111211}details{margin-top:.8rem}summary{cursor:pointer}li{margin:.45rem 0}@media(max-width:650px){main{grid-template-columns:1fr}}
+</style>
+<header><img id="logo" alt="Tech Você" hidden><small>TECH VOCÊ · TREINAMENTO INTERNO</small><h1>Trilha Técnica</h1><p>Da chegada do equipamento à expedição.</p><progress id="progress" max="6" value="0" aria-label="Progresso da trilha"></progress><p id="count" aria-live="polite"></p></header>
+<main><nav id="nav" aria-label="Aulas"><strong>Aulas</strong></nav><section aria-labelledby="title"><h2 id="title"></h2><p id="description"></p><p id="notice" role="status"></p><div id="player"></div><p><label><input id="confirm" type="checkbox" disabled> Confirmo que finalizei esta aula</label></p><button id="next" hidden>Próxima aula</button></section></main>
+<h2>Checklists de consulta</h2>
+<details><summary>Revisão e arquivo de controle</summary><ul>
+<li>Registrar número de série, marca, modelo, técnico, data e localização.</li>
+<li>Conferir linha, modelo e geração do processador, RAM, tipo e capacidade de armazenamento e tela touch.</li>
+<li>Preparar o equipamento conforme o procedimento interno, instalar Windows e conferir drivers.</li>
+<li>Testar tela, brilho, touch quando houver, teclado, touchpad, câmera, microfone, áudio, portas e rede.</li>
+<li>Conferir carregador, bateria, memória, armazenamento, inicialização e estabilidade.</li>
+<li>Registrar resultado de cada teste, falhas, reparos, reteste e status final no controle.</li>
+</ul></details>
+<details><summary>Expedição</summary><ul>
+<li>Conferir proposta aprovada, pagamento confirmado e nota fiscal de venda emitida.</li>
+<li>Separar a unidade e conferir modelo, configuração, número de série, condição e acessórios.</li>
+<li>Verificar testes de tela, comandos, câmera, áudio, portas, rede, energia e estabilidade conforme o modelo.</li>
+<li>Limpar criteriosamente tela, carcaça, teclado, bordas e acessórios. Fazer a inspeção visual final.</li>
+<li>Proteger a unidade, acomodar os acessórios e lacrar a caixa. Pesar e medir o volume embalado.</li>
+<li>Conferir endereço e CEP, selecionar o frete no Melhor Envio, imprimir e conferir a etiqueta.</li>
+<li>Registrar rastreio e separar o pacote para despacho conforme a transportadora ou serviço.</li>
+</ul></details>
+<p>No arquivo de controle, registre cada teste como aprovado, reprovado, pendente ou não aplicável.</p>
+<script>
+const logoUrl = '';
+// Preencha a terceira coluna de cada aula com o caminho ou URL direta do MP4.
+const lessons = [
+ ['A história da Tech Você','Daniela e Murilo fundaram a Tech Você em março de 2025. Conheça a história da empresa e o papel do técnico.',''],
+ ['Segurança do trabalho','Priorize a saúde e a segurança na bancada e no transporte de equipamentos.',''],
+ ['Seu primeiro dia na Tech Você','Conheça a equipe e as rotinas de horário, ponto e acessos. Em caso de dúvidas, fale com seu líder direto.',''],
+ ['Recebimento e identificação','Confira primeiro a nota fiscal. Depois, registre a identificação e a condição dos equipamentos.',''],
+ ['Revisão de equipamentos','Registre o número de série e a configuração, instale o Windows e documente os testes e retestes.',''],
+ ['Expedição de equipamentos','Da proposta aprovada e do pagamento confirmado à conferência, embalagem, frete e despacho.','']
+];
+const get = id => document.getElementById(id);
+if (logoUrl) { get('logo').src = logoUrl; get('logo').hidden = false; }
+let state = {};
+try { state = JSON.parse(localStorage.getItem('tech-voce-trilha-v1')) || {}; } catch {}
+function save(){ try { localStorage.setItem('tech-voce-trilha-v1', JSON.stringify(state)); } catch {} }
+const complete = index => Boolean(lessons[index][2] && state[index]?.source === lessons[index][2] && state[index].done);
+const available = index => lessons.slice(0,index).every((_,i)=>complete(i));
+function openLesson(index){
+ if(!available(index)) return;
+ const [title, description, source] = lessons[index];
+ get('title').textContent = title;
+ get('description').textContent = description;
+ get('player').replaceChildren();
+ const record = state[index]?.source === source ? state[index] : (state[index]={source, watched:0, done:false});
+ const confirm = get('confirm');
+ confirm.checked = Boolean(record.done);
+ confirm.disabled = !record.done;
+ get('next').hidden = !record.done || index === lessons.length-1;
+ get('next').onclick = () => openLesson(index+1);
+ get('notice').textContent = source ? '' : 'Vídeo ainda não publicado.';
+ if(source){
+  const video = document.createElement('video');
+  video.controls = true;
+  video.preload = 'metadata';
+  video.src = source;
+  get('player').append(video);
+  video.addEventListener('loadedmetadata', () => { if(record.watched < video.duration) video.currentTime = record.watched; });
+  video.addEventListener('error', () => { get('notice').textContent = 'Não foi possível carregar o vídeo.'; });
+  video.addEventListener('timeupdate', () => {
+   if(!video.seeking && video.currentTime >= record.watched && video.currentTime <= record.watched + 1.25){
+    record.watched = video.currentTime; save();
+   }
+  });
+  video.addEventListener('seeked', () => { if(!record.done && video.currentTime > record.watched + 0.3) video.currentTime = record.watched; });
+  video.addEventListener('ended', () => { if(record.watched >= video.duration - 0.5) confirm.disabled = false; });
+ }
+ confirm.onchange = () => {
+  if(!confirm.checked || record.done){confirm.checked = Boolean(record.done);return;}
+  record.done=true; save(); openLesson(index);
+ };
+ const nav = get('nav');
+ nav.replaceChildren(Object.assign(document.createElement('strong'),{textContent:'Aulas'}));
+ lessons.forEach(([name],i)=>{
+  const button = document.createElement('button');
+  button.disabled = !available(i);
+  button.textContent = (i+1)+'. '+name+(complete(i)?' · Concluída':button.disabled?' · Bloqueada':'');
+  if(i===index) button.setAttribute('aria-current','true');
+  button.onclick=()=>openLesson(i);
+  nav.append(button);
+ });
+ const count = lessons.filter((_,i)=>complete(i)).length;
+ get('progress').value=count;
+ get('count').textContent=count+' de '+lessons.length+' aulas concluídas neste navegador.';
+}
+const first = lessons.findIndex((_,i)=>!complete(i));
+openLesson(first < 0 ? lessons.length-1 : first);
+</script>
+</html>
