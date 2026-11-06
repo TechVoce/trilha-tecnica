@@ -27,6 +27,7 @@
 <li>Registrar rastreio e separar o pacote para despacho conforme a transportadora ou serviço.</li>
 </ul></details>
 <p>No arquivo de controle, registre cada teste como aprovado, reprovado, pendente ou não aplicável.</p>
+<script src="videos.js"></script>
 <script>
 const logoUrl = '';
 // Preencha a terceira coluna de cada aula com o caminho ou URL direta do MP4.
@@ -38,6 +39,7 @@ const lessons = [
  ['Revisão de equipamentos','Registre o número de série e a configuração, instale o Windows e documente os testes e retestes.',''],
  ['Expedição de equipamentos','Da proposta aprovada e do pagamento confirmado à conferência, embalagem, frete e despacho.','']
 ];
+lessons.forEach((lesson,index) => { lesson[2] = window.trilhaVideos?.[index] || lesson[2]; });
 const get = id => document.getElementById(id);
 if (logoUrl) { get('logo').src = logoUrl; get('logo').hidden = false; }
 let state = {};
@@ -58,7 +60,17 @@ function openLesson(index){
  get('next').hidden = !record.done || index === lessons.length-1;
  get('next').onclick = () => openLesson(index+1);
  get('notice').textContent = source ? '' : 'Vídeo ainda não publicado.';
- if(source){
+ if(/^https:\/\/(?:www\.)?tella\.(?:tv|com)\/video\/[\w-]+\/embed(?:\?|$)/i.test(source)){
+  const frame = document.createElement('iframe');
+  frame.src = source;
+  frame.title = title;
+  frame.allow = 'autoplay; fullscreen; picture-in-picture';
+  frame.allowFullscreen = true;
+  frame.style.cssText = 'width:100%;aspect-ratio:16/9;border:0';
+  get('player').append(frame);
+  confirm.disabled = false;
+  get('notice').textContent = 'Assista ao vídeo e confirme a conclusão abaixo.';
+ } else if(source){
   const video = document.createElement('video');
   video.controls = true;
   video.preload = 'metadata';
