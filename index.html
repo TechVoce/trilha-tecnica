@@ -5,9 +5,47 @@
 <title>Trilha Técnica | Tech Você</title>
 <style>
 :root{color-scheme:dark;font:16px system-ui;background:#111211;color:#f3f5f2}body{max-width:68rem;margin:auto;padding:1.5rem}header{padding:2rem 0}header img{max-width:11rem;max-height:5rem}h1{font-size:clamp(2rem,6vw,4rem);margin:.4rem 0}small,progress{color:#b9fa3c}progress{width:100%;accent-color:#b9fa3c}main{display:grid;grid-template-columns:1fr 2fr;gap:1rem}section,nav,details{background:#232423;padding:1.25rem;border-radius:1rem}button{font:inherit;border:1px solid #969996;border-radius:.5rem;padding:.65rem;background:#111211;color:inherit;text-align:left;cursor:pointer}button:disabled{opacity:.65;cursor:default}nav button{display:block;width:100%;margin:.5rem 0}button[aria-current=true]{border-color:#b9fa3c}video{width:100%;background:#111211}details{margin-top:.8rem}summary{cursor:pointer}li{margin:.45rem 0}@media(max-width:650px){main{grid-template-columns:1fr}}
+
+#completion{margin:1rem 0;border:1px solid #247449}
+#certificate-form{display:flex;flex-wrap:wrap;align-items:end;gap:.75rem}
+#certificate-form label{display:grid;gap:.35rem;flex:1 1 15rem}
+#certificate-form input{font:inherit;padding:.65rem;border-radius:.45rem;border:1px solid #969996}
+#certificate{position:relative;margin:1rem 0;padding:clamp(1.25rem,6vw,4rem);background:#f8f8ef;color:#17251d;border:8px double #247449;text-align:center;overflow-wrap:anywhere;color-scheme:light}
+#certificate .brand{font-weight:800;letter-spacing:.22em;color:#247449}
+#certificate h2{font:clamp(1.8rem,5vw,3rem) Georgia,serif;margin:.8rem 0}
+#certificate .recipient{font:bold clamp(1.5rem,4vw,2.6rem) Georgia,serif;margin:.6rem 0;color:#145032}
+#certificate p{max-width:43rem;margin:.7rem auto;line-height:1.55}
+#certificate footer{margin-top:1.75rem;border-top:1px solid #247449;padding-top:.8rem;font-weight:700}
+@media print{
+ @page{size:A4 landscape;margin:12mm}
+ html,body{background:white!important;color:black!important;margin:0;padding:0;max-width:none}
+ body > :not(#completion),#completion > :not(#certificate){display:none!important}
+ #completion{margin:0;padding:0;border:0;background:white}
+ #certificate{margin:0;padding:14mm 12mm;break-inside:avoid;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+}
 </style>
 <header><img id="logo" alt="Tech Você" hidden><small>TECH VOCÊ · TREINAMENTO INTERNO</small><h1>Trilha Técnica</h1><p>Da chegada do equipamento à expedição.</p><progress id="progress" max="6" value="0" aria-label="Progresso da trilha"></progress><p id="count" aria-live="polite"></p></header>
 <main><nav id="nav" aria-label="Aulas"><strong>Aulas</strong></nav><section aria-labelledby="title"><h2 id="title"></h2><p id="description"></p><p id="notice" role="status"></p><div id="player"></div><p><label><input id="confirm" type="checkbox" disabled> Confirmo que finalizei esta aula</label></p><button id="next" hidden>Próxima aula</button></section></main>
+<section id="completion" hidden aria-labelledby="completion-title">
+<h2 id="completion-title" tabindex="-1">Treinamento concluído</h2>
+<p>Informe seu nome completo para gerar seu certificado.</p>
+<form id="certificate-form">
+<label>Nome completo<input id="certificate-name" name="nome" autocomplete="name" required maxlength="120"></label>
+<button type="submit">Gerar certificado</button>
+</form>
+<p id="certificate-error" role="status"></p>
+<article id="certificate" hidden aria-labelledby="certificate-title">
+<div class="brand">TECH VOCÊ</div>
+<h2 id="certificate-title">Certificado de Conclusão</h2>
+<p>A Tech Você certifica que</p>
+<p class="recipient" id="certificate-recipient"></p>
+<p>concluiu a <strong>Trilha Técnica de Manutenção de Hardware</strong>, composta por seis aulas.</p>
+<p><strong>Conteúdo abordado</strong><br>Integração e rotinas da Tech Você, segurança no transporte e na manutenção, recebimento e conferência fiscal, revisão e testes de equipamentos, limpeza, embalagem e expedição.</p>
+<p>Conclusão em <time id="certificate-date"></time></p>
+<footer>Tech Você · Treinamento Técnico</footer>
+</article>
+<button id="print-certificate" type="button" hidden>Imprimir ou salvar em PDF</button>
+</section>
 <h2>Checklists de consulta</h2>
 <details><summary>Revisão e arquivo de controle</summary><ul>
 <li>Registrar número de série, marca, modelo, técnico, data e localização.</li>
@@ -88,7 +126,11 @@ function openLesson(index){
  }
  confirm.onchange = () => {
   if(!confirm.checked || record.done){confirm.checked = Boolean(record.done);return;}
-  record.done=true; save(); openLesson(index);
+  record.done = true;
+  record.completedAt = new Date().toISOString();
+  save();
+  openLesson(index);
+  if (!get('completion').hidden) get('completion-title').focus();
  };
  const nav = get('nav');
  nav.replaceChildren(Object.assign(document.createElement('strong'),{textContent:'Aulas'}));
@@ -101,9 +143,44 @@ function openLesson(index){
   nav.append(button);
  });
  const count = lessons.filter((_,i)=>complete(i)).length;
+ const finished = count === lessons.length;
+ get('completion').hidden = !finished;
+ if (finished && !state.certificateDate) {
+  state.certificateDate = state[index]?.completedAt || new Date().toISOString();
+  save();
+ }
+ if (!finished && state.certificateDate) {
+  delete state.certificateDate;
+  get('certificate').hidden = true;
+  get('print-certificate').hidden = true;
+  save();
+ }
  get('progress').value=count;
  get('count').textContent=count+' de '+lessons.length+' aulas concluídas neste navegador.';
 }
+get('certificate-form').addEventListener('submit', event => {
+ event.preventDefault();
+ if (!lessons.every((_, i) => complete(i))) return;
+ const name = get('certificate-name').value.trim().replace(/\s+/g, ' ');
+ if (name.split(' ').length < 2) {
+  get('certificate-error').textContent = 'Digite seu nome e sobrenome.';
+  get('certificate-name').focus();
+  return;
+ }
+ get('certificate-error').textContent = '';
+ get('certificate-recipient').textContent = name;
+ const date = new Date(state.certificateDate);
+ get('certificate-date').dateTime = date.toISOString();
+ get('certificate-date').textContent = new Intl.DateTimeFormat('pt-BR', {
+  dateStyle: 'long', timeZone: 'America/Sao_Paulo'
+ }).format(date);
+ get('certificate').hidden = false;
+ get('print-certificate').hidden = false;
+ get('certificate').scrollIntoView({block:'nearest'});
+});
+get('print-certificate').addEventListener('click', () => {
+ if (lessons.every((_, i) => complete(i)) && !get('certificate').hidden) window.print();
+});
 const first = lessons.findIndex((_,i)=>!complete(i));
 openLesson(first < 0 ? lessons.length-1 : first);
 </script>
